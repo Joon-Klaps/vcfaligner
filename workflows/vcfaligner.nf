@@ -43,6 +43,7 @@ workflow VCFALIGNER {
             [meta, map, vcf]
         }
 
+    ch_map_vcf.view()
     // Custom script to update the vcf or tsv/csv file with the new map coordinates of the alignment
 
 
