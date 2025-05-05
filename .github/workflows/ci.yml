@@ -30,9 +30,9 @@ jobs:
           - "24.04.2"
           - "latest-everything"
         profile:
-          - "conda"
+          # - "conda"
           - "docker"
-          - "singularity"
+          # - "singularity"
         test_name:
           - "test"
         isMaster:

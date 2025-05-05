@@ -24,8 +24,8 @@
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^\\S+\\.[bv]cf(\\.gz)?$",
-                "errorMessage": "VCF file must be a valid path and have a .vcf, .bcf, .vcf.gz extension"
+                "pattern": "^\\S+\\.([bv]cf|([ct]sv))(\\.gz)?$",
+                "errorMessage": "VCF file must be a valid path and have a .vcf, .bcf, .tsv, .csv extension, can be gziped"
             }
         },
         "required": ["sample", "vcf", "fasta"]
