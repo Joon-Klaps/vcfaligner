@@ -1,0 +1,17 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##bcftoolsVersion=1.18+htslib-1.18
+##contig=<ID=MK117940.1>
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=SB,Number=1,Type=Integer,Description="Strand Bias">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allele Depth">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	MK117940.1
+MK117940.1	45	.	A	G	228.436	PASS	DP=220;AF=0.95;SB=0	GT:DP:AD:GQ	1/1:220:10,210:99
+MK117940.1	97	.	T	C	210.127	PASS	DP=195;AF=0.89;SB=2	GT:DP:AD:GQ	1/1:195:20,175:99
+MK117940.1	156	.	G	A	198.342	PASS	DP=180;AF=0.91;SB=1	GT:DP:AD:GQ	1/1:180:15,165:99
+MK117940.1	210	.	C	T	245.789	PASS	DP=230;AF=0.94;SB=3	GT:DP:AD:GQ	1/1:230:12,218:99
+MK117940.1	301	.	A	G	187.453	PASS	DP=175;AF=0.86;SB=2	GT:DP:AD:GQ	1/1:175:25,150:99

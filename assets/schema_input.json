@@ -1,7 +1,7 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/master/assets/schema_input.json",
-    "title": "Joon-Klaps/vcfaligner pipeline - params.input schema",
+    "$id": "https://raw.githubusercontent.com/Joon-Klaps/snpeffannotate/master/assets/schema_input.json",
+    "title": "Joon-Klaps/snpeffannotate pipeline - params.input schema",
     "description": "Schema for the file provided with params.input",
     "type": "array",
     "items": {
@@ -13,21 +13,21 @@
                 "errorMessage": "Sample name must be provided and cannot contain spaces",
                 "meta": ["id"]
             },
-            "fastq_1": {
+            "fasta": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^\\S+\\.fa(sta)?(\\.gz)?$",
+                "errorMessage": "Fasta file must be a valid path and have a .fa, .fasta, .fa.gz or .fasta.gz extension"
             },
-            "fastq_2": {
+            "vcf": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^\\S+\\.[bv]cf(\\.gz)?$",
+                "errorMessage": "VCF file must be a valid path and have a .vcf, .bcf, .vcf.gz extension"
             }
         },
-        "required": ["sample", "fastq_1"]
+        "required": ["sample", "vcf", "fasta"]
     }
 }
