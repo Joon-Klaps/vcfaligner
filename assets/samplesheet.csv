@@ -1,3 +1,8 @@
-sample,fastq_1,fastq_2
-SAMPLE_PAIRED_END,/path/to/fastq/files/AEG588A1_S1_L002_R1_001.fastq.gz,/path/to/fastq/files/AEG588A1_S1_L002_R2_001.fastq.gz
-SAMPLE_SINGLE_END,/path/to/fastq/files/AEG588A4_S4_L003_R1_001.fastq.gz,
+sample,fasta,vcf
+sample1,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/MK117940.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample1_MK117940.1.vcf
+sample2,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/MH888004.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample2_MH888004.1.vcf
+sample3,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/MH887919.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample3_MH887919.1.vcf
+sample4,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/MG812674.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample4_MG812674.1.vcf
+sample5,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/KM821932.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample5_KM821932.1.vcf
+sample7,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/KM821932.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample7_KM821932.1.vcf
+sample8,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/KM821932.1.fasta,https://raw.githubusercontent.com/Joon-Klaps/vcfaligner/refs/heads/master/assets/data/sample8_KM821932.1.tsv
