@@ -3,10 +3,11 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { paramsSummaryMap              } from 'plugin/nf-schema'
-include { softwareVersionsToYAML        } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { MAFFT_ALIGN as MAFFT_ALL      } from '../modules/nf-core/mafft/align/main.nf'
-include { MAFFT_ALIGN as MAFFT_INDIV    } from '../modules/nf-core/mafft/align/main.nf'
+include { paramsSummaryMap         } from 'plugin/nf-schema'
+include { softwareVersionsToYAML   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { MAFFT_ALIGN as MAFFT_ALL } from '../modules/nf-core/mafft/align/main.nf'
+include { MAFFT_ALIGN as MAFFT_ADD } from '../modules/nf-core/mafft/align/main.nf'
+include { PATCHVCF                 } from '../modules/local/patchvcf/main.nf'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -26,26 +27,27 @@ workflow VCFALIGNER {
         .unique()
         .tap{ch_fasta}
         .collectFile(name: "all_fasta.fa"){it[1]}
-        .map{it -> [[id:"all_fasta"], it]}
+        .map{it -> [[id:"references"], it]}
         .set{fastas_all}
 
     MAFFT_ALL( fastas_all,[[:],[]], [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
         .fas
+        .map{ meta, fasta  -> [[id:"ref_aligned"], fasta] }
         .set{ch_aligned}
 
-    MAFFT_INDIV( ch_aligned, ch_fasta, [[:],[]], [[:],[]], [[:],[]], [[:],[]], true)
-    ch_versions = MAFFT_INDIV.out.versions
+    MAFFT_ADD( ch_aligned, fastas_all, [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
+    ch_versions = MAFFT_ADD.out.versions
 
-    ch_map_vcf = ch_samplesheet
-        .map{ meta, fasta, vcf -> [[id:fasta], meta, vcf] }
-        .join(MAFFT_INDIV.out.map)
-        .map{ fasta_id, meta, vcf, map ->
-            [meta, map, vcf]
+    ch_map_vcf_fasta = ch_samplesheet
+        .combine(MAFFT_ADD.out.map)
+        .map{ meta, fasta, vcf, mafft_id, map ->
+            [meta, map, vcf, fasta]
         }
 
-    ch_map_vcf.view()
-    // Custom script to update the vcf or tsv/csv file with the new map coordinates of the alignment
 
+    // Custom script to update the vcf or tsv/csv file with the new map coordinates of the alignment
+    PATCHVCF(ch_map_vcf_fasta)
+    ch_versions = ch_versions.mix(PATCHVCF.out.versions)
 
     //
     // Collate and save software versions

@@ -1,6 +1,5 @@
 Changes in component 'nf-core/mafft/align'
 'modules/nf-core/mafft/align/environment.yml' is unchanged
-'modules/nf-core/mafft/align/meta.yml' is unchanged
 Changes in 'mafft/align/main.nf':
 --- modules/nf-core/mafft/align/main.nf
 +++ modules/nf-core/mafft/align/main.nf
@@ -8,11 +7,12 @@ Changes in 'mafft/align/main.nf':
  
      output:
      tuple val(meta), path("*.fas{.gz,}"), emit: fas
-+    tuple val(meta2), path("*.map")      , emit: map
++    tuple val(meta2), path("*.map")     , emit: map, optional: true
      path "versions.yml"                 , emit: versions
  
      when:
 
-'modules/nf-core/mafft/align/tests/main.nf.test.snap' is unchanged
+'modules/nf-core/mafft/align/meta.yml' is unchanged
 'modules/nf-core/mafft/align/tests/main.nf.test' is unchanged
+'modules/nf-core/mafft/align/tests/main.nf.test.snap' is unchanged
 ************************************************************

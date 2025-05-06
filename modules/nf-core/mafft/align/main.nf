@@ -18,7 +18,7 @@ process MAFFT_ALIGN {
 
     output:
     tuple val(meta), path("*.fas{.gz,}"), emit: fas
-    tuple val(meta2), path("*.map")      , emit: map
+    tuple val(meta2), path("*.map")     , emit: map, optional: true
     path "versions.yml"                 , emit: versions
 
     when:
