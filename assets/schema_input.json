@@ -13,6 +13,13 @@
                 "errorMessage": "Sample name must be provided and cannot contain spaces",
                 "meta": ["id"]
             },
+            "group": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Group name must be provided and cannot contain spaces",
+                "default": "default",
+                "meta": ["group"]
+            },
             "fasta": {
                 "type": "string",
                 "format": "file-path",

@@ -28,7 +28,7 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def setup_logging(log_level: str, prefix: str) -> logging.Logger:
     """Set up logging configuration."""
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    log_format = '%(asctime)s - %(levelname)s - %(message)s'
 
     logger = logging.getLogger('patchvcf')
     logger.setLevel(log_level)

@@ -23,27 +23,32 @@ workflow VCFALIGNER {
     ch_versions = Channel.empty()
 
     ch_samplesheet
-        .map{ meta, fasta, vcf -> [[id:fasta],fasta] }
+        .map{ meta, fasta, vcf -> [[id:fasta] + meta.subMap('group'),fasta] }
         .unique()
-        .tap{ch_fasta}
-        .collectFile(name: "all_fasta.fa"){it[1]}
-        .map{it -> [[id:"references"], it]}
+        .collectFile{ meta, fasta ->
+            ["${meta.group}.fa", fasta]
+        }
+        .map { file ->
+            def group = file.simpleName
+            def id = "${group}_references"
+            [[id:id, group:group], file]}
         .set{fastas_all}
 
     MAFFT_ALL( fastas_all,[[:],[]], [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
         .fas
-        .map{ meta, fasta  -> [[id:"ref_aligned"], fasta] }
+        .map{ meta, fasta  -> [meta + [id: "${meta.group}_aligned"], fasta] }
         .set{ch_aligned}
 
     MAFFT_ADD( ch_aligned, fastas_all, [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
+    added_maps = MAFFT_ADD.out.map.map{ meta, map  -> [meta.group, meta, map] }
     ch_versions = MAFFT_ADD.out.versions
 
-    ch_map_vcf_fasta = ch_samplesheet
-        .combine(MAFFT_ADD.out.map)
-        .map{ meta, fasta, vcf, mafft_id, map ->
+    ch_map_vcf_fasta =ch_samplesheet
+        .map { meta, fasta, vcf -> [meta.group, meta, fasta, vcf] }
+        .combine(added_maps, by: 0)
+        .map{ _group,  meta, fasta, vcf, _meta2, map ->
             [meta, map, vcf, fasta]
         }
-
 
     // Custom script to update the vcf or tsv/csv file with the new map coordinates of the alignment
     PATCHVCF(ch_map_vcf_fasta)
