@@ -27,14 +27,14 @@ process PATCHVCF {
         $args \\
         -m ${map} \\
         -v ${vcf} \\
+        -f ${fasta} \\
         -p $prefix
 
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python --version | sed 's/Python //g')
-        numpy: \$(pip show numpy | grep Version | sed 's/Version: //g')
-        pandas: \$(pip show pandas | grep Version | sed 's/Version: //g')
+        pandas: \$(pip show pandas | grep Version | sed -n '1s/Version: //gp')
     END_VERSIONS
     """
 
@@ -48,8 +48,7 @@ process PATCHVCF {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python --version | sed 's/Python //g')
-        numpy: \$(pip show numpy | grep Version | sed 's/Version: //g')
-        pandas: \$(pip show pandas | grep Version | sed 's/Version: //g')
+        pandas: \$(pip show pandas | grep Version | sed -n '1s/Version: //gp')
     END_VERSIONS
     """
 }
