@@ -36,10 +36,14 @@ workflow VCFALIGNER {
 
     MAFFT_ALL( fastas_all,[[:],[]], [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
         .fas
-        .map{ meta, fasta  -> [meta + [id: "${meta.group}_aligned"], fasta] }
+        .join(fastas_all)
+        .multiMap{ meta, aligned, fasta_all  ->
+            reference: [meta + [id: "${meta.group}_aligned"], aligned]
+            add: [meta, fasta_all]
+        }
         .set{ch_aligned}
 
-    MAFFT_ADD( ch_aligned, fastas_all, [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
+    MAFFT_ADD( ch_aligned.reference, ch_aligned.add, [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
     added_maps = MAFFT_ADD.out.map.map{ meta, map  -> [meta.group, meta, map] }
     ch_versions = MAFFT_ADD.out.versions
 
