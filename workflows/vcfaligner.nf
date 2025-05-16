@@ -28,15 +28,22 @@ workflow VCFALIGNER {
         .collectFile{ meta, fasta ->
             ["${meta.group}.fa", fasta]
         }
+        .tap { collected }
         .map { file ->
             def group = file.simpleName
             def id = "${group}_references"
             [[id:id, group:group], file]}
+        .branch{meta, fasta ->
+            good : fasta.countFasta() > 1
+            bad : fasta.countFasta() <= 1
+        }
         .set{fastas_all}
 
-    MAFFT_ALL( fastas_all,[[:],[]], [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
+    fastas_all.bad.view()
+
+    MAFFT_ALL( fastas_all.good,[[:],[]], [[:],[]], [[:],[]], [[:],[]], [[:],[]], false)
         .fas
-        .join(fastas_all)
+        .join(fastas_all.good)
         .multiMap{ meta, aligned, fasta_all  ->
             reference: [meta + [id: "${meta.group}_aligned"], aligned]
             add: [meta, fasta_all]
