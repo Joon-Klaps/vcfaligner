@@ -6,7 +6,7 @@ import sys
 import logging
 import os
 import gzip
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import pandas as pd
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -49,7 +49,24 @@ def setup_logging(log_level: str, prefix: str) -> logging.Logger:
 
     return logger
 
-def read_map_file(file_path: str, logger: logging.Logger) -> pd.DataFrame:
+def reverse_complement(sequence: str) -> str:
+    """Generate the reverse complement of a nucleotide sequence.
+
+    Args:
+        sequence: Input nucleotide sequence (string of A, T, G, C)
+
+    Returns:
+        Reverse complemented sequence
+    """
+    complement_dict = {'a': 't', 't': 'a', 'g': 'c', 'c': 'g',
+                       'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G',
+                       'n': 'n', 'N': 'N'}
+
+    # Reverse the sequence and get the complement of each nucleotide
+    rev_comp = ''.join(complement_dict.get(base, base) for base in reversed(sequence))
+    return rev_comp
+
+def read_map_file(file_path: str, logger: logging.Logger) -> Tuple[pd.DataFrame, Dict[str, int]]:
     """Read and parse the mapping file into a pandas DataFrame.
 
     Args:
@@ -57,19 +74,14 @@ def read_map_file(file_path: str, logger: logging.Logger) -> pd.DataFrame:
         logger: Logger object
 
     Returns:
-        A pandas DataFrame containing the mapping information with columns:
-        - genome: The genome/reference name
-        - old_position: Position in the original sequence
-        - nucleotide: The nucleotide at this position
-        - new_position: Position in the reference alignment
+        A tuple containing:
+        - A pandas DataFrame with the mapping information (columns: genome, old_position, nucleotide, new_position)
+        - A dictionary mapping reverse complemented genome names to their maximum positions
     """
     logger.info(f"Reading mapping file: {file_path}")
 
     # Lists to store the parsed data
-    genomes = []
-    old_positions = []
-    nucleotides = []
-    new_positions = []
+    data_rows = []
 
     current_genome = None
 
@@ -83,6 +95,11 @@ def read_map_file(file_path: str, logger: logging.Logger) -> pd.DataFrame:
                     # Extract the genome ID (everything before the first space)
                     current_genome = line[1:].split()[0]
                     logger.debug(f"Processing mappings for genome: {current_genome}")
+
+                    # Check if this is a reverse complemented genome
+                    if current_genome.startswith('_R_'):
+                        logger.info(f"Detected reverse complemented genome: {current_genome}")
+
                     continue
 
                 # Skip comment lines
@@ -95,26 +112,18 @@ def read_map_file(file_path: str, logger: logging.Logger) -> pd.DataFrame:
                         # Parse "nucleotide, old_position, new_position"
                         parts = line.split(',')
                         if len(parts) == 3:
-                            nucleotide = parts[0].strip().lower()
-                            old_position = int(parts[1].strip())
-                            new_position = int(parts[2].strip())
+                            data_rows.append({
+                                'genome': current_genome,
+                                'nucleotide': parts[0].strip().lower(),
+                                'old_position': int(parts[1].strip()),
+                                'new_position': int(parts[2].strip())
+                            })
 
-                            genomes.append(current_genome)
-                            old_positions.append(old_position)
-                            nucleotides.append(nucleotide)
-                            new_positions.append(new_position)
                     except (ValueError, IndexError) as e:
                         logger.warning(f"Skipping invalid line in map file: {line}, error: {e}")
 
         # Create DataFrame from the collected data
-        map_df = pd.DataFrame({
-            'genome': genomes,
-            'old_position': old_positions,
-            'nucleotide': nucleotides,
-            'new_position': new_positions
-        })
-
-        logger.info(f"Map file loaded successfully with {len(map_df)} entries across {map_df['genome'].nunique()} genomes")
+        map_df = pd.DataFrame(data_rows)
         return map_df
     except Exception as e:
         logger.error(f"Failed to read map file: {e}")
@@ -179,7 +188,7 @@ def read_vcf_file(file_path: str, logger: logging.Logger, fasta_path: str =None 
         sys.exit(1)
 
 def process_vcf_with_map(vcf_header: List[str], vcf_data: pd.DataFrame,
-                         map_data: pd.DataFrame, logger: logging.Logger) -> Tuple[List[str], pd.DataFrame]:
+                         map_data: pd.DataFrame,logger: logging.Logger) -> Tuple[List[str], pd.DataFrame]:
     """Process VCF data using the mapping information.
 
     Args:
@@ -215,9 +224,11 @@ def process_vcf_with_map(vcf_header: List[str], vcf_data: pd.DataFrame,
 
     # Join the dataframes on the merge key
     merged_data = pd.merge(processed_data,
-                           map_data[['merge_key', 'new_position', 'nucleotide']],
+                           map_data[['merge_key', 'new_position', 'nucleotide', 'is_RC']],
                            on='merge_key',
                            how='left')
+
+    merged_data = patch_nucleotide_rc(merged_data,logger)
 
     # Count mapped and unmapped positions
     mapped = merged_data['new_position'].notna()
@@ -225,7 +236,6 @@ def process_vcf_with_map(vcf_header: List[str], vcf_data: pd.DataFrame,
     unmapped_count = (~mapped).sum()
 
     # Check for reference nucleotide mismatches
-    ref_mismatches = 0
     if mapped_count > 0:
         # Create lowercase versions for comparison
         merged_data['ref_lower'] = merged_data['REF'].str.lower()
@@ -234,12 +244,6 @@ def process_vcf_with_map(vcf_header: List[str], vcf_data: pd.DataFrame,
         # Identify mismatches
         mismatches = (merged_data['new_position'].notna() &
                       (merged_data['ref_lower'] != merged_data['nucleotide_lower']))
-        ref_mismatches = mismatches.sum()
-
-        if ref_mismatches > 0:
-            logger.warning(f"Found {ref_mismatches} positions with reference mismatches")
-            # For mismatches, we'll leave the position as NA
-            merged_data.loc[mismatches, 'new_position'] = None
 
     # Update positions where there's a valid mapping
     merged_data.loc[merged_data['new_position'].notna(), 'POS'] = merged_data.loc[merged_data['new_position'].notna(), 'new_position']
@@ -249,7 +253,7 @@ def process_vcf_with_map(vcf_header: List[str], vcf_data: pd.DataFrame,
                                            'ref_lower', 'nucleotide_lower'], errors='ignore')
 
     logger.info(f"Processed {len(processed_data)} VCF records: "
-               f"{mapped_count - ref_mismatches} positions mapped, {unmapped_count + ref_mismatches} positions unchanged")
+               f"{mapped_count } positions mapped, {unmapped_count} positions unchanged")
 
     return vcf_header, result_data
 
@@ -283,6 +287,78 @@ def write_output_vcf(vcf_header: List[str], vcf_data: pd.DataFrame, prefix: str,
         logger.error(f"Failed to write output VCF file: {e}")
         sys.exit(1)
 
+def patch_map_rc(map_data: pd.DataFrame) -> pd.DataFrame:
+    """Patch genome locations for reverse complemented genomes."""
+    # Identify reverse complemented genomes
+    df = map_data.copy()
+    df['is_RC'] = df['genome'].str.startswith('_R_')
+
+    df.to_csv("reverse_complement_genomes.tsv", index=False, sep="\t", header=True)
+
+    # Remove the '_R_' prefix from genome names
+    df['genome'] = df['genome'].str.replace('_R_', '', regex=False)
+
+    # Identify max position
+    df['max_position'] = df.groupby('genome')['old_position'].transform('max')
+
+    # Update old positions for reverse complemented genomes
+    df['old_position'] = df.apply(
+        lambda x: x['max_position'] - x['old_position'] + 1 if x['is_RC'] else x['old_position'], axis=1
+    )
+    df.drop(columns=['max_position'], inplace=True)
+
+    df.to_csv("updated_map_data.tsv", index=False, sep="\t", header=True)
+
+    return df
+
+def patch_nucleotide_rc(df: pd.DataFrame, logger) -> pd.DataFrame:
+    """Patch nucleotide sequences for reverse complemented genomes."""
+    # Create a copy to avoid modifying the original dataframe
+    df = df.copy()
+
+    logger.debug("%s",df.columns)
+    # Create a boolean mask for rows where reverse complement should be applied
+    rc_mask = df['is_RC'].fillna(False)
+
+    # If there are no rows to reverse complement, return the dataframe as is
+    if not rc_mask.any():
+        return df
+
+    logger.debug("Found regions to update due to reverse complement")
+    # Apply reverse complement to REF column for RC rows
+    if 'REF' in df.columns:
+        # Only process rows that need reverse complement
+        ref_to_rc = df.loc[rc_mask, 'REF']
+        df.loc[rc_mask, 'REF'] = ref_to_rc.apply(reverse_complement)
+
+    # Apply reverse complement to ALT column for RC rows
+    if 'ALT' in df.columns:
+        # Process each alternative allele
+        alt_to_rc = df.loc[rc_mask, 'ALT']
+        df.loc[rc_mask, 'ALT'] = alt_to_rc.apply(
+            lambda alts: ','.join(reverse_complement(allele) for allele in alts.split(','))
+        )
+
+    # Apply reverse complement to Consensus column for RC rows
+    if 'Consensus' in df.columns:
+        consensus_to_rc = df.loc[rc_mask, 'Consensus']
+        df.loc[rc_mask, 'Consensus'] = consensus_to_rc.apply(reverse_complement)
+
+    # Swap complementary nucleotide counts
+    nucleotide_pairs = [('A', 'T'), ('C', 'G')]
+    for n1, n2 in nucleotide_pairs:
+        if n1 in df.columns and n2 in df.columns:
+            # Store temporary copies of the values
+            temp_n1 = df.loc[rc_mask, n1].copy()
+            temp_n2 = df.loc[rc_mask, n2].copy()
+
+            # Swap the values
+            df.loc[rc_mask, n1] = temp_n2
+            df.loc[rc_mask, n2] = temp_n1
+
+    return df
+
+
 def main(argv=None):
     """Main function to orchestrate the VCF processing workflow."""
     # Parse command line arguments
@@ -295,10 +371,13 @@ def main(argv=None):
     try:
         # Read input files
         map_data = read_map_file(args.map, logger)
+        update_map_data = patch_map_rc(map_data)
         vcf_header, vcf_data = read_vcf_file(args.vcf, logger, args.fasta)
 
         # Process VCF with mapping data
-        processed_header, processed_data = process_vcf_with_map(vcf_header, vcf_data, map_data, logger)
+        processed_header, processed_data = process_vcf_with_map(
+            vcf_header, vcf_data, update_map_data, logger
+        )
 
         # Write output
         output_file = write_output_vcf(processed_header, processed_data, args.prefix, logger)
